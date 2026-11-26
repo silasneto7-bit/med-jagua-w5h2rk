@@ -106,6 +106,7 @@ pre{white-space:pre-wrap;word-break:break-all;font-size:11px;background:#f3f5f7;
 .pm{position:absolute;transform:translate(-50%,-50%);width:46px;height:46px;border-radius:50%;border:3px solid #fff;background:#0b4f7a;color:#fff;font-weight:800;font-size:22px;box-shadow:0 1px 6px rgba(0,0,0,.55);padding:0}
 .pm.l3{font-size:15px}
 .pm.l4{font-size:12px}
+.inp.falta{border-color:#b91c1c;background:#fff5f5}
 .pm.lw{width:auto;min-width:46px;padding:0 10px;border-radius:23px;font-size:14px;white-space:nowrap}
 .qb b.lw{font-size:20px;line-height:1.5}
 .lb.nm{grid-column:span 2}
@@ -783,7 +784,9 @@ function rEnviar(){
     '<div class="k"><span>Itens de quantidade</span><b>'+ex.contagem.pu_linhas+'</b></div>';
   Object.keys(ex.batalha).forEach(function(a){h+='<div class="k"><span class="muted">'+esc(a)+'</span><span>'+ex.batalha[a].length+'</span></div>'});
   h+='</div>';
-  h+='<div class="card"><label>Técnico<input class="inp" id="tec" value="'+esc(st.tecnico)+'" placeholder="Nome do técnico"></label></div>';
+  var tf=ui.tecFalta&&!String(st.tecnico||'').trim();
+  h+='<div class="card"><label>Técnico<input class="inp'+(tf?' falta':'')+'" id="tec" value="'+esc(st.tecnico)+'" placeholder="Nome do técnico" autocomplete="name"></label>'+
+    (tf?'<div class="warn bad" id="tecw" style="margin-top:8px">Informe o seu nome antes de enviar: ele vai no arquivo da medição.</div>':'')+'</div>';
   h+='<div class="card"><button class="btn g" style="width:100%;margin-bottom:8px" data-act="share">Compartilhar (WhatsApp)</button>'+
      '<div class="row"><button class="btn o" style="flex:1" data-act="baixar">Baixar arquivo</button><button class="btn o" style="flex:1" data-act="copiar">Copiar texto</button></div>'+
      (ui.enviarMsg?'<div class="warn" style="margin-top:8px">'+esc(ui.enviarMsg)+'</div>':'')+
@@ -811,6 +814,14 @@ function rEnviar(){
   return h;
 }
 function enviarTexto(){return JSON.stringify(montaExport())}
+/* nome do técnico obrigatório para Compartilhar/Baixar/Copiar (decisão do Eng., 2026-11-26) */
+function tecOk(){
+  if(String(st.tecnico||'').trim())return true;
+  ui.tecFalta=true;render();
+  var el=$('tec');if(el){el.scrollIntoView({block:'center'});el.focus()}
+  toast('Informe o nome do técnico antes de enviar');
+  return false;
+}
 function modoAbertura(){
   var p=location.protocol;
   if(p==='content:')return 'quando o app é aberto de dentro do WhatsApp';
@@ -924,9 +935,7 @@ document.addEventListener('click',function(ev){
   }
   else if(a==='puAdd'){var i=+g('i');var s=st.pu[i]=puEstado(i);s.parc.push({d:'',c:'',a:''});save();render()}
   else if(a==='puDel'){var i2=+g('i');var s2=puEstado(i2);s2.parc.splice(+g('j'),1);st.pu[i2]=s2;save();render()}
-  else if(a==='share')compartilhar();
-  else if(a==='baixar')baixar();
-  else if(a==='copiar')copiar();
+  else if(a==='share'||a==='baixar'||a==='copiar'){if(!tecOk())return;if(a==='share')compartilhar();else if(a==='baixar')baixar();else copiar()}
   else if(a==='ver'){ui.ver=!ui.ver;render()}
   else if(a==='limpar'){if(confirm('Apagar as marcações e quantidades da medição '+MED()+' neste aparelho? Só faça isso depois de enviar o arquivo. Não dá para desfazer.')){st.marks={};st.pu={};st.cant={};st.cantOk=false;save();ui.enviarMsg='Marcações apagadas.';render();toast('Marcações da medição '+MED()+' apagadas')}}
   else if(a==='encerrar'){if(confirm('Encerrar a medição '+MED()+' e abrir a '+(MED()+1)+'? Confirme que o arquivo da medição '+MED()+' já foi enviado. As marcas viram "Campo '+MED()+'" (provisórias) até sair a medição final.'))encerrar()}
@@ -949,7 +958,7 @@ document.addEventListener('input',function(ev){
   var el=ev.target;
   if(el.id==='busca'){ui.busca=el.value;var pos=el.selectionStart;render();var n=$('busca');if(n){n.focus();try{n.setSelectionRange(pos,pos)}catch(e){}}}
   else if(el.id==='sbusca'){ui.sbusca=el.value;var pos2=el.selectionStart;render();var n2=$('sbusca');if(n2){n2.focus();try{n2.setSelectionRange(pos2,pos2)}catch(e){}}}
-  else if(el.id==='tec'){st.tecnico=el.value;save()}
+  else if(el.id==='tec'){st.tecnico=el.value;save();if(el.value.trim()){ui.tecFalta=false;el.classList.remove('falta');var tw=$('tecw');if(tw)tw.style.display='none'}}
   else if(el.hasAttribute&&el.hasAttribute('data-cant')){
     var ln2=+el.getAttribute('data-cant'),f2=el.getAttribute('data-f'),pos3=el.selectionStart;
     var sc2=st.cant[ln2]=st.cant[ln2]||{atual:'',obs:''};sc2[f2]=el.value;st.cantOk=false;save();render();
